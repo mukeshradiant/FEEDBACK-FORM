@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Management & Online Portal</title>
+    <!-- XLSX Library for Excel Upload/Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f8fafc; color: #1e293b; }
+        
+        /* Top Navigation Bar */
+        #topBar { display: none; justify-content: space-between; align-items: center; background: #1e293b; color: white; padding: 12px 20px; }
+        .top-left { display: flex; align-items: center; gap: 10px; }
+        
+        /* Buttons */
+        button { cursor: pointer; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; transition: 0.2s; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-warning { background: #d97706; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-action-sm { padding: 4px 8px; font-size: 11px; margin-right: 2px; }
+        
+        /* Notice Ticker */
+        .notice-bar { background: #eff6ff; color: #1d4ed8; padding: 10px 20px; font-size: 14px; border-bottom: 1px solid #bfdbfe; font-weight: bold; }
+        
+        /* Panels & Cards */
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+        .panel { display: none; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .auth-card { max-width: 420px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .info-card { background: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+        
+        /* Tabs */
+        .tab-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; background: #e2e8f0; color: #475569; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { background: #2563eb; color: white; }
+
+        /* Grid System */
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .dash-card { background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid #cbd5e1; }
+        .dash-card:hover { background: #e2e8f0; }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #475569; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
+        .badge-status { background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
+        .badge-disabled { background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <div id="topBar">
+        <div class="top-left">
+            <button id="btnBack" class="btn-warning" onclick="backToGrid()">⬅ Back</button>
+            <h3 id="userRoleTitle">Dashboard</h3>
+        </div>
+        <button class="btn-danger" onclick="logout()">Logout 🚪</button>
+    </div>
+
+    <!-- Public Notice -->
+    <div class="notice-bar" id="publicNoticeTicker">
+        📢 NOTICE: Welcome to the School Management & Learning Portal.
+    </div>
+
+    <div class="container">
+        <!-- 1. LOGIN PANEL -->
+        <div id="loginPanel" class="auth-card">
+            <h2 style="text-align: center; margin-bottom: 20px;">Portal Login</h2>
+            <div class="tab-group">
+                <div class="tab-btn active" onclick="selectRole('admin', event)">Admin</div>
+                <div class="tab-btn" onclick="selectRole('teacher', event)">Teacher</div>
+                <div class="tab-btn" onclick="selectRole('student', event)">Student</div>
+            </div>
+            <form onsubmit="doLogin(event)">
+                <div class="form-group" id="userGroup" style="display: none;">
+                    <label id="lblUser">User ID / Mobile</label>
+                    <input type="text" id="loginId">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">Login</button>
+            </form>
+        </div>
+
+        <!-- 2. ADMIN DASHBOARD -->
+        <div id="adminPanel" class="panel">
+            <div class="admin-grid">
+                <div class="dash-card" onclick="openModule('modStudents')"><h3>👨‍🎓 Students</h3><p>Manage & Import Students</p></div>
+                <div class="dash-card" onclick="openModule('modTeachers')"><h3>👨‍🏫 Teachers</h3><p>Manage & Assign Classes</p></div>
+                <div class="dash-card" onclick="openModule('modLive')"><h3>🔴 Live Classes</h3><p>Schedule Classes</p></div>
+                <div class="dash-card" onclick="openModule('modQB')"><h3>❓ Question Bank</h3><p>Manage Test Questions</p></div>
+                <div class="dash-card" onclick="openModule('modMarks')"><h3>📊 Marks Entry</h3><p>Batch Enter Marks</p></div>
+                <div class="dash-card" onclick="openModule('modSettings')"><h3>⚙ Settings</h3><p>Notices & Password</p></div>
+            </div>
+
+            <!-- Sub Modules -->
+            <div id="modStudents" class="module-card" style="display:none; margin-top:20px;">
+                <h3>Student Management</h3>
+                <div style="display:flex; gap:10px; margin: 15px 0;">
+                    <button class="btn-success" onclick="downloadStudentTemplate()">Download Excel Template</button>
+                    <input type="file" id="stExcelFile" accept=".xlsx, .xls">
+                    <button class="btn-primary" onclick="uploadStudentExcel()">Upload Excel</button>
+                </div>
+                <h4>Add Single Student</h4>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-top:10px;">
+                    <input type="text" id="addStName" placeholder="Name">
+                    <input type="text" id="addStRoll" placeholder="Roll No">
+                    <input type="text" id="addStFather" placeholder="Father Name">
+                    <input type="text" id="addStMobile" placeholder="Mobile">
+                    <input type="password" id="addStPass" placeholder="Password">
+                    <select id="addStClass" class="class-dropdown"></select>
+                    <select id="addStSec"><option>Section A</option><option>Section B</option></select>
+                </div>
+                <button class="btn-primary" style="margin-top:10px;" onclick="addSingleStudent()">Add Student</button>
+                <table>
+                    <thead><tr><th>Student Name</th><th>Mobile</th><th>Class</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="studentTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="modTeachers" class="module-card" style="display:none; margin-top:20px;">
+                <h3>Teacher Management</h3>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-top:10px;">
+                    <input type="text" id="addTcName" placeholder="Teacher Name">
+                    <input type="text" id="addTcSub" placeholder="Subject">
+                    <input type="password" id="addTcPass" placeholder="Password">
+                    <select id="addTcClass" class="class-dropdown"></select>
+                    <select id="addTcSec"><option>Section A</option><option>Section B</option></select>
+                </div>
+                <button class="btn-primary" style="margin-top:10px;" onclick="addTeacher()">Add Teacher</button>
+                <table>
+                    <thead><tr><th>Teacher</th><th>Assigned Class</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="teacherTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="modLive" class="module-card" style="display:none; margin-top:20px;">
+                <h3>Schedule Live Class</h3>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin:10px 0;">
+                    <select id="adLiveCls" class="class-dropdown"></select>
+                    <select id="adLiveSec"><option>Section A</option><option>Section B</option></select>
+                    <input type="text" id="adLiveSub" placeholder="Subject">
+                    <input type="text" id="adLiveTc" placeholder="Teacher Name">
+                    <input type="date" id="adLiveDate">
+                    <input type="time" id="adLiveTime">
+                    <input type="text" id="adLiveLink" placeholder="Meeting Link (Google Meet/Zoom)">
+                </div>
+                <button class="btn-primary" onclick="publishLiveClass('adLiveCls','adLiveSec','adLiveSub','adLiveTc','adLiveDate','adLiveTime','adLiveLink')">Schedule Class</button>
+                <table>
+                    <thead><tr><th>Class</th><th>Subject / Teacher</th><th>Schedule</th><th>Actions</th></tr></thead>
+                    <tbody id="adminLiveTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="modQB" class="module-card" style="display:none; margin-top:20px;">
+                <h3>Question Bank</h3>
+                <button class="btn-success" onclick="downloadQuestionTemplate()" style="margin-bottom:10px;">Download Question Template</button>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+                    <select id="qbCls" class="class-dropdown"></select>
+                    <input type="text" id="qbChap" placeholder="Chapter">
+                    <input type="text" id="qbQues" placeholder="Question">
+                    <input type="text" id="qbOptA" placeholder="Option A">
+                    <input type="text" id="qbOptB" placeholder="Option B">
+                    <input type="text" id="qbOptC" placeholder="Option C">
+                    <input type="text" id="qbOptD" placeholder="Option D">
+                    <select id="qbAns"><option value="A">Ans A</option><option value="B">Ans B</option><option value="C">Ans C</option><option value="D">Ans D</option></select>
+                </div>
+                <button class="btn-primary" style="margin-top:10px;" onclick="addQuestion()">Add Question</button>
+                <table>
+                    <thead><tr><th>Class/Chap</th><th>Question</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="questionTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="modMarks" class="module-card" style="display:none; margin-top:20px;">
+                <h3>Batch Marks Entry</h3>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <select id="markAdmCls" class="class-dropdown"></select>
+                    <select id="markAdmSec"><option value="">Select Sec</option><option>Section A</option><option>Section B</option></select>
+                    <input type="text" id="markAdmSub" placeholder="Subject Name">
+                    <button class="btn-primary" onclick="loadStudentsForMarks('adm')">Fetch Students</button>
+                </div>
+                <div id="admMarksListContainer" style="display:none;">
+                    <table>
+                        <thead><tr><th>Student</th><th>Mobile</th><th>Enter Marks (Out of 100)</th></tr></thead>
+                        <tbody id="admMarksListBody"></tbody>
+                    </table>
+                    <button class="btn-success" style="margin-top:10px;" onclick="saveBatchMarks('adm')">Save All Marks</button>
+                </div>
+            </div>
+
+            <div id="modSettings" class="module-card" style="display:none; margin-top:20px;">
+                <h3>System Settings</h3>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>Notice Board Update</label>
+                    <input type="text" id="adNoticeTitle" placeholder="Notice Title">
+                    <textarea id="adNoticeDesc" placeholder="Notice Description" style="margin-top:5px;"></textarea>
+                    <button class="btn-primary" style="margin-top:5px;" onclick="publishNotice()">Publish Notice</button>
+                </div>
+                <hr style="margin:20px 0;">
+                <div class="form-group">
+                    <label>Change Admin Password</label>
+                    <input type="password" id="newAdminPass" placeholder="New Password">
+                    <button class="btn-warning" style="margin-top:5px;" onclick="updateAdminPass()">Update Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TEACHER DASHBOARD -->
+        <div id="teacherPanel" class="panel">
+            <h3>Publish Live Class</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin:10px 0;">
+                <input type="text" id="tcLiveSub" placeholder="Subject Name">
+                <input type="date" id="tcLiveDate">
+                <input type="time" id="tcLiveTime">
+                <input type="text" id="tcLiveLink" placeholder="Meeting Link">
+            </div>
+            <button class="btn-primary" onclick="publishTcLiveClass()">Schedule Class</button>
+            <div id="tcLiveClassStatusList" style="margin-top:15px;"></div>
+            
+            <hr style="margin:20px 0;">
+            <h3>Add Test Question</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin:10px 0;">
+                <input type="text" id="tcQbChap" placeholder="Chapter">
+                <input type="text" id="tcQbQues" placeholder="Question">
+                <input type="text" id="tcQbOptA" placeholder="Option A">
+                <input type="text" id="tcQbOptB" placeholder="Option B">
+                <select id="tcQbAns"><option value="A">Ans A</option><option value="B">Ans B</option></select>
+            </div>
+            <button class="btn-primary" onclick="addTcQuestion()">Publish Question</button>
+            <div id="tcQuestionPreviewContainer" style="margin-top:15px;"></div>
+
+            <hr style="margin:20px 0;">
+            <h3>Batch Marks Entry</h3>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="markTcSub" placeholder="Subject Name">
+                <button class="btn-primary" onclick="loadStudentsForMarks('tc')">Load My Class Students</button>
+            </div>
+            <div id="tcMarksListContainer" style="display:none;">
+                <table>
+                    <thead><tr><th>Student</th><th>Mobile</th><th>Enter Marks</th></tr></thead>
+                    <tbody id="tcMarksListBody"></tbody>
+                </table>
+                <button class="btn-success" style="margin-top:10px;" onclick="saveBatchMarks('tc')">Save Marks</button>
+            </div>
+
+            <hr style="margin:20px 0;">
+            <h3>Student Online Test Submissions</h3>
+            <table>
+                <thead><tr><th>Student Mobile</th><th>Question</th><th>Given Answer</th><th>Score</th></tr></thead>
+                <tbody id="tcTestResultsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 4. STUDENT DASHBOARD -->
+        <div id="studentPanel" class="panel">
+            <h3>🔴 Live Classes</h3>
+            <div id="stLiveContainer" style="margin-top:10px;"></div>
+
+            <hr style="margin:20px 0;">
+            <h3>📝 Available Tests & Quizzes</h3>
+            <div id="stTestActiveContainer" style="margin-top:10px;"></div>
+
+            <h4 style="margin-top:15px;">Test Attempt History</h4>
+            <div id="stTestHistoryContainer" style="margin-top:10px;"></div>
+
+            <hr style="margin:20px 0;">
+            <h3>📋 Academic Report Card</h3>
+            <div style="margin: 10px 0; background:#f1f5f9; padding:15px; border-radius:8px; display:flex; justify-between; align-items:center;">
+                <div>Overall Percentage: <strong id="stOverallScore" style="font-size:18px;">N/A</strong></div>
+                <div>Status: <span id="stOverallBadge" class="badge-status">PENDING</span></div>
+            </div>
+            <table>
+                <thead><tr><th>Subject</th><th>Marks Obtained</th><th>Result</th></tr></thead>
+                <tbody id="stReportCardBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script Block containing state variables and application logic -->
+    <script>
+        // Data Structures & Initial State Variables
+        let activeRole = 'admin';
+        let loggedInUser = null;
+        let assignedTeacher = null;
+        let adminPassword = localStorage.getItem('adminPassword') || 'admin123';
+
+        const availableClasses = ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'];
+
+        let studentsDB = JSON.parse(localStorage.getItem('studentsDB')) || [
+            { name: "Rahul Kumar", roll: "101", father: "Ramesh Kumar", mobile: "9800000001", pass: "123456", cls: "Class 1", sec: "Section A", active: true }
+        ];
+
+        let teachersDB = JSON.parse(localStorage.getItem('teachersDB')) || [
+            { name: "Suresh Sharma", sub: "Mathematics", pass: "123456", cls: "Class 1", sec: "Section A", active: true }
+        ];
+
+        let liveClasses = JSON.parse(localStorage.getItem('liveClasses')) || [];
+        
+        let questionsDB = JSON.parse(localStorage.getItem('questionsDB')) || [
+            { id: 1, cls: "Class 1", chap: "Ch 1: Numbers", ques: "What is 5 + 3?", optA: "7", optB: "8", optC: "9", optD: "10", ans: "B", active: true }
+        ];
+
+        let testResultsDB = JSON.parse(localStorage.getItem('testResultsDB')) || [];
+        let marksDB = JSON.parse(localStorage.getItem('marksDB')) || {};
+
+        // Core Storage Helper
+        function saveData() {
+            localStorage.setItem('adminPassword', adminPassword);
+            localStorage.setItem('studentsDB', JSON.stringify(studentsDB));
+            localStorage.setItem('teachersDB', JSON.stringify(teachersDB));
+            localStorage.setItem('liveClasses', JSON.stringify(liveClasses));
+            localStorage.setItem('questionsDB', JSON.stringify(questionsDB));
+            localStorage.setItem('testResultsDB', JSON.stringify(testResultsDB));
+            localStorage.setItem('marksDB', JSON.stringify(marksDB));
+        }
+
+        // Initialization
+        window.onload = function() {
+            populateClassDropdowns();
+            renderStudentsTable();
+            renderTeachersTable();
+            renderAdminLiveClasses();
+            renderQuestionsTable();
+        };
+
+        function populateClassDropdowns() {
+            const dropdowns = document.querySelectorAll('.class-dropdown');
+            dropdowns.forEach(select => {
+                select.innerHTML = availableClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+            });
+        }
+
+        // Role Selector Switch
+        function selectRole(role, evt) {
+            activeRole = role;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (evt && evt.target) evt.target.classList.add('active');
+
+            const userGroup = document.getElementById('userGroup');
+            const lblUser = document.getElementById('lblUser');
+
+            if (role === 'admin') {
+                userGroup.style.display = 'none';
+            } else {
+                userGroup.style.display = 'block';
+                lblUser.innerText = role === 'student' ? 'Student Mobile Number' : 'Teacher Name / User ID';
+            }
+        }
+
+        // Authentication logic
+        function doLogin(e) {
+            e.preventDefault();
+            const id = document.getElementById('loginId').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            if (activeRole === 'admin') {
+                if (pass === adminPassword) {
+                    showPanel('adminPanel', '🔒 Administrator Dashboard');
+                } else {
+                    alert("Invalid Admin Password!");
+                }
+            } else if (activeRole === 'teacher') {
+                const teacher = teachersDB.find(t => t.name.toLowerCase() === id.toLowerCase() && t.pass === pass);
+                if (teacher) {
+                    if (!teacher.active) { alert("Your account is disabled by Admin."); return; }
+                    assignedTeacher = teacher;
+                    showPanel('teacherPanel', `👨‍🏫 Welcome, ${teacher.name} (${teacher.cls} - ${teacher.sec})`);
+                    renderTeacherLiveClasses();
+                    renderTeacherQuestions();
+                    renderTeacherResults();
+                } else {
+                    alert("Invalid Teacher credentials!");
+                }
+            } else if (activeRole === 'student') {
+                const student = studentsDB.find(s => s.mobile === id && s.pass === pass);
+                if (student) {
+                    if (!student.active) { alert("Your student account is currently inactive."); return; }
+                    loggedInUser = student;
+                    showPanel('studentPanel', `🎓 Student Portal: ${student.name} (${student.cls})`);
+                    renderStudentLive();
+                    renderStudentTests();
+                    renderStudentMarks();
+                } else {
+                    alert("Invalid Student credentials!");
+                }
+            }
+        }
+
+        function showPanel(panelId, title) {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+            document.getElementById(panelId).style.display = 'block';
+            document.getElementById('topBar').style.display = 'flex';
+            document.getElementById('userRoleTitle').innerText = title;
+            backToGrid();
+        }
+
+        function logout() {
+            loggedInUser = null;
+            assignedTeacher = null;
+            document.getElementById('topBar').style.display = 'none';
+            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+            document.getElementById('btnBack').style.display = 'none';
+            document.getElementById('loginPanel').style.display = 'block';
+        }
+
+        // Module Routing Navigation
+        function openModule(moduleId) {
+            document.querySelectorAll('.admin-grid').forEach(g => g.style.display = 'none');
+            document.querySelectorAll('.module-card').forEach(m => m.style.display = 'none');
+            document.getElementById(moduleId).style.display = 'block';
+            document.getElementById('btnBack').style.display = 'inline-block';
+        }
+
+        function backToGrid() {
+            document.querySelectorAll('.module-card').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.admin-grid').forEach(g => g.style.display = 'grid');
+            document.getElementById('btnBack').style.display = 'none';
+        }
+
+        // ================= ADMIN OPERATIONS =================
+        function addSingleStudent() {
+            const name = document.getElementById('addStName').value.trim();
+            const roll = document.getElementById('addStRoll').value.trim();
+            const father = document.getElementById('addStFather').value.trim();
+            const mobile = document.getElementById('addStMobile').value.trim();
+            const pass = document.getElementById('addStPass').value.trim();
+            const cls = document.getElementById('addStClass').value;
+            const sec = document.getElementById('addStSec').value;
+
+            if (!name || !mobile || !pass) { alert("Name, Mobile, and Password are required!"); return; }
+
+            studentsDB.push({ name, roll, father, mobile, pass, cls, sec, active: true });
+            saveData();
+            renderStudentsTable();
+            alert("Student Added Successfully!");
+        }
+
+        function renderStudentsTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = studentsDB.map((st, i) => `
+                <tr>
+                    <td><strong>${st.name}</strong><br><small style="color:#64748b;">S/o: ${st.father || 'N/A'}</small></td>
+                    <td>${st.mobile}</td>
+                    <td>${st.cls} (${st.sec})</td>
+                    <td><span class="${st.active ? 'badge-status' : 'badge-disabled'}">${st.active ? 'Active' : 'Disabled'}</span></td>
+                    <td>
+                        <button class="btn-action-sm btn-warning" onclick="toggleStudentStatus(${i})">${st.active ? 'Disable' : 'Enable'}</button>
+                        <button class="btn-action-sm btn-danger" onclick="deleteStudent(${i})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleStudentStatus(i) { studentsDB[i].active = !studentsDB[i].active; saveData(); renderStudentsTable(); }
+        function deleteStudent(i) { if(confirm("Are you sure?")) { studentsDB.splice(i,1); saveData(); renderStudentsTable(); } }
+
+        function downloadStudentTemplate() {
+            const wsData = [["Name", "Roll", "FatherName", "Mobile", "Password", "Class", "Section"], ["Rohan Kumar", "102", "Suresh Kumar", "9800011122", "123456", "Class 1", "Section A"]];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Students");
+            XLSX.writeFile(wb, "Student_Upload_Template.xlsx");
+        }
+
+        function uploadStudentExcel() {
+            const file = document.getElementById('stExcelFile').files[0];
+            if (!file) { alert("Select an Excel file first!"); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                json.forEach(row => {
+                    if (row.Name && row.Mobile) {
+                        studentsDB.push({
+                            name: String(row.Name),
+                            roll: String(row.Roll || ''),
+                            father: String(row.FatherName || ''),
+                            mobile: String(row.Mobile),
+                            pass: String(row.Password || '123456'),
+                            cls: row.Class || 'Class 1',
+                            sec: row.Section || 'Section A',
+                            active: true
+                        });
+                    }
+                });
+                saveData();
+                renderStudentsTable();
+                alert("Excel Students Imported Successfully!");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function addTeacher() {
+            const name = document.getElementById('addTcName').value.trim();
+            const sub = document.getElementById('addTcSub').value.trim();
+            const pass = document.getElementById('addTcPass').value.trim();
+            const cls = document.getElementById('addTcClass').value;
+            const sec = document.getElementById('addTcSec').value;
+
+            if (!name || !pass) { alert("Teacher Name and Password required!"); return; }
+
+            teachersDB.push({ name, sub, pass, cls, sec, active: true });
+            saveData();
+            renderTeachersTable();
+            alert("Teacher Added & Assigned!");
+        }
+
+        function renderTeachersTable() {
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = teachersDB.map((tc, i) => `
+                <tr>
+                    <td><strong>${tc.name}</strong><br><small style="color:#64748b;">${tc.sub}</small></td>
+                    <td>${tc.cls} (${tc.sec})</td>
+                    <td><span class="${tc.active ? 'badge-status' : 'badge-disabled'}">${tc.active ? 'Active' : 'Disabled'}</span></td>
+                    <td>
+                        <button class="btn-action-sm btn-warning" onclick="toggleTeacherStatus(${i})">${tc.active ? 'Disable' : 'Enable'}</button>
+                        <button class="btn-action-sm btn-danger" onclick="deleteTeacher(${i})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleTeacherStatus(i) { teachersDB[i].active = !teachersDB[i].active; saveData(); renderTeachersTable(); }
+        function deleteTeacher(i) { if(confirm("Are you sure?")) { teachersDB.splice(i,1); saveData(); renderTeachersTable(); } }
+
+        // Live Class Helpers
+        function publishLiveClass(clsId, secId, subId, teacherId, dateId, timeId, linkId) {
+            const cls = document.getElementById(clsId).value;
+            const sec = document.getElementById(secId).value;
+            const sub = document.getElementById(subId).value.trim();
+            const teacher = document.getElementById(teacherId).value.trim();
+            const date = document.getElementById(dateId).value;
+            const time = document.getElementById(timeId).value;
+            const link = document.getElementById(linkId).value.trim();
+
+            if (!sub || !link || !date || !time) { alert("Fill all Live Class fields!"); return; }
+
+            liveClasses.push({ id: Date.now(), cls, sec, sub, teacher, date, time, link, status: "incomplete" });
+            saveData();
+            renderAdminLiveClasses();
+            alert("Live Class Scheduled Successfully!");
+        }
+
+        function renderAdminLiveClasses() {
+            const tbody = document.getElementById('adminLiveTableBody');
+            tbody.innerHTML = liveClasses.map((lc, i) => `
+                <tr>
+                    <td>${lc.cls} (${lc.sec})</td>
+                    <td><strong>${lc.sub}</strong><br><small style="color:#64748b;">${lc.teacher}</small></td>
+                    <td>${lc.date} @ ${lc.time}</td>
+                    <td>
+                        <button class="btn-action-sm btn-danger" onclick="deleteLiveClass(${i})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteLiveClass(i) { liveClasses.splice(i,1); saveData(); renderAdminLiveClasses(); }
+
+        // Questions Management
+        function addQuestion() {
+            const cls = document.getElementById('qbCls').value;
+            const chap = document.getElementById('qbChap').value.trim();
+            const ques = document.getElementById('qbQues').value.trim();
+            const optA = document.getElementById('qbOptA').value.trim();
+            const optB = document.getElementById('qbOptB').value.trim();
+            const optC = document.getElementById('qbOptC').value.trim();
+            const optD = document.getElementById('qbOptD').value.trim();
+            const ans = document.getElementById('qbAns').value;
+
+            if (!chap || !ques || !optA || !optB) { alert("Please fill question details!"); return; }
+
+            questionsDB.push({ id: Date.now(), cls, chap, ques, optA, optB, optC, optD, ans, active: true });
+            saveData();
+            renderQuestionsTable();
+            alert("Question Added!");
+        }
+
+        function renderQuestionsTable() {
+            const tbody = document.getElementById('questionTableBody');
+            tbody.innerHTML = questionsDB.map((q, i) => `
+                <tr>
+                    <td><strong>${q.cls}</strong><br><small style="color:#64748b;">${q.chap}</small></td>
+                    <td>${q.ques}</td>
+                    <td><span class="${q.active ? 'badge-status' : 'badge-disabled'}">${q.active ? 'Active' : 'Disabled'}</span></td>
+                    <td>
+                        <button class="btn-action-sm btn-warning" onclick="toggleQuestionStatus(${i})">${q.active ? 'Disable' : 'Enable'}</button>
+                        <button class="btn-action-sm btn-danger" onclick="deleteQuestion(${i})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleQuestionStatus(i) { questionsDB[i].active = !questionsDB[i].active; saveData(); renderQuestionsTable(); }
+        function deleteQuestion(i) { questionsDB.splice(i,1); saveData(); renderQuestionsTable(); }
+
+        function downloadQuestionTemplate() {
+            const wsData = [["Class", "Chapter", "Question", "OptionA", "OptionB", "OptionC", "OptionD", "AnswerKey"], ["Class 1", "Ch 1", "What is capital of Bihar?", "Patna", "Gaya", "Muzaffarpur", "Chhapra", "A"]];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Questions");
+            XLSX.writeFile(wb, "Question_Bank_Template.xlsx");
+        }
+
+        function publishNotice() {
+            const title = document.getElementById('adNoticeTitle').value.trim();
+            const desc = document.getElementById('adNoticeDesc').value.trim();
+            if (!title || !desc) { alert("Title and Description required!"); return; }
+            document.getElementById('publicNoticeTicker').innerText = `📢 NOTICE: ${title.toUpperCase()} - ${desc}`;
+            alert("Public Notice Published!");
+        }
+
+        function updateAdminPass() {
+            const newP = document.getElementById('newAdminPass').value.trim();
+            if (!newP) return;
+            adminPassword = newP;
+            saveData();
+            alert("Admin Password Updated Successfully!");
+        }
+
+        // Dynamic Batch Marks Entry System
+        function loadStudentsForMarks(role) {
+            let cls, sec, container, tbody;
+            if (role === 'adm') {
+                cls = document.getElementById('markAdmCls').value;
+                sec = document.getElementById('markAdmSec').value;
+                container = document.getElementById('admMarksListContainer');
+                tbody = document.getElementById('admMarksListBody');
+            } else {
+                cls = assignedTeacher.cls;
+                sec = assignedTeacher.sec;
+                container = document.getElementById('tcMarksListContainer');
+                tbody = document.getElementById('tcMarksListBody');
+            }
+
+            if (!sec) { container.style.display = 'none'; return; }
+
+            const list = studentsDB.filter(s => s.cls === cls && s.sec === sec && s.active);
+            if (list.length === 0) {
+                alert("No active students found in this section.");
+                container.style.display = 'none';
+                return;
+            }
+
+            tbody.innerHTML = list.map(st => `
+                <tr>
+                    <td>${st.name}</td>
+                    <td>${st.mobile}</td>
+                    <td><input type="number" class="mark-input" data-mobile="${st.mobile}" placeholder="e.g. 85" style="width:100px; padding:6px;"></td>
+                </tr>
+            `).join('');
+            container.style.display = 'block';
+        }
+
+        function saveBatchMarks(role) {
+            const sub = role === 'adm' ? document.getElementById('markAdmSub').value.trim() : document.getElementById('markTcSub').value.trim();
+            if (!sub) { alert("Enter Subject name first!"); return; }
+
+            const inputs = document.querySelectorAll(role === 'adm' ? '#admMarksListBody .mark-input' : '#tcMarksListBody .mark-input');
+            inputs.forEach(inp => {
+                const mob = inp.dataset.mobile;
+                const val = inp.value.trim();
+                if (val !== "") {
+                    if (!marksDB[mob]) marksDB[mob] = {};
+                    marksDB[mob][sub] = parseFloat(val);
+                }
+            });
+
+            saveData();
+            alert("Marks Saved Successfully!");
+        }
+
+        // ================= TEACHER OPERATIONS =================
+        function publishTcLiveClass() {
+            const sub = document.getElementById('tcLiveSub').value.trim();
+            const date = document.getElementById('tcLiveDate').value;
+            const time = document.getElementById('tcLiveTime').value;
+            const link = document.getElementById('tcLiveLink').value.trim();
+
+            if (!sub || !link || !date || !time) { alert("Fill all Live Class fields!"); return; }
+
+            liveClasses.push({
+                id: Date.now(),
+                cls: assignedTeacher.cls,
+                sec: assignedTeacher.sec,
+                sub: sub,
+                teacher: assignedTeacher.name,
+                date: date,
+                time: time,
+                link: link,
+                status: "incomplete"
+            });
+            saveData();
+            renderTeacherLiveClasses();
+            alert("Class Published!");
+        }
+
+        function renderTeacherLiveClasses() {
+            const list = liveClasses.filter(lc => lc.cls === assignedTeacher.cls && lc.sec === assignedTeacher.sec && lc.teacher === assignedTeacher.name);
+            const container = document.getElementById('tcLiveClassStatusList');
+            if (list.length === 0) { container.innerHTML = `<p style="font-size:13px; color:#64748b;">No live classes scheduled.</p>`; return; }
+
+            container.innerHTML = list.map(lc => `
+                <div class="info-card">
+                    <strong>${lc.sub} (${lc.date} @ ${lc.time})</strong>
+                    Status: <span class="${lc.status === 'completed' ? 'badge-disabled' : 'badge-status'}">${lc.status.toUpperCase()}</span><br><br>
+                    ${lc.status === 'incomplete' ? `<button class="btn-warning btn-action-sm" onclick="markClassComplete(${lc.id})">Mark as Completed</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function markClassComplete(id) {
+            const item = liveClasses.find(l => l.id === id);
+            if (item) { item.status = 'completed'; saveData(); renderTeacherLiveClasses(); }
+        }
+
+        function addTcQuestion() {
+            const chap = document.getElementById('tcQbChap').value.trim();
+            const ques = document.getElementById('tcQbQues').value.trim();
+            const optA = document.getElementById('tcQbOptA').value.trim();
+            const optB = document.getElementById('tcQbOptB').value.trim();
+            const ans = document.getElementById('tcQbAns').value;
+
+            if (!chap || !ques || !optA || !optB) { alert("Fill required fields!"); return; }
+
+            questionsDB.push({
+                id: Date.now(),
+                cls: assignedTeacher.cls,
+                chap: chap,
+                ques: ques,
+                optA: optA,
+                optB: optB,
+                optC: "", optD: "",
+                ans: ans,
+                active: true
+            });
+            saveData();
+            renderTeacherQuestions();
+            alert("Question Published to Assigned Class!");
+        }
+
+        function renderTeacherQuestions() {
+            const list = questionsDB.filter(q => q.cls === assignedTeacher.cls);
+            const container = document.getElementById('tcQuestionPreviewContainer');
+            if (list.length === 0) { container.innerHTML = `<p style="font-size:13px; color:#64748b;">No questions added yet.</p>`; return; }
+
+            container.innerHTML = list.map(q => `
+                <div class="info-card">
+                    <strong>${q.chap}: ${q.ques}</strong>
+                    A) ${q.optA} | B) ${q.optB} <br>
+                    Correct Answer: Option ${q.ans}
+                </div>
+            `).join('');
+        }
+
+        function renderTeacherResults() {
+            const tbody = document.getElementById('tcTestResultsBody');
+            if (testResultsDB.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">No tests submitted by students yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = testResultsDB.map(r => `
+                <tr>
+                    <td>${r.studentMobile}</td>
+                    <td>${r.questionText}</td>
+                    <td>Option ${r.givenAnswer}</td>
+                    <td><strong style="color:${r.isCorrect ? '#16a34a' : '#dc2626'}">${r.isCorrect ? '1 / 1' : '0 / 1'}</strong></td>
+                </tr>
+            `).join('');
+        }
+
+        // ================= STUDENT OPERATIONS =================
+        function renderStudentLive() {
+            const container = document.getElementById('stLiveContainer');
+            const list = liveClasses.filter(lc => lc.cls === loggedInUser.cls && lc.sec === loggedInUser.sec);
+
+            if (list.length === 0) {
+                container.innerHTML = `<p style="text-align:center; padding:20px; color:#64748b;">No upcoming live classes scheduled for ${loggedInUser.cls} (${loggedInUser.sec}).</p>`;
+                return;
+            }
+
+            container.innerHTML = list.map(lc => {
+                const isDone = lc.status === 'completed';
+                return `
+                    <div class="info-card" style="border-left-color: ${isDone ? '#94a3b8' : '#2563eb'}">
+                        <strong>${lc.sub} — ${lc.teacher}</strong>
+                        📅 Date: ${lc.date} | ⏰ Time: ${lc.time}<br><br>
+                        ${isDone 
+                            ? `<button class="btn-primary btn-disabled" disabled>Class Ended</button>` 
+                            : `<a href="${lc.link}" target="_blank" style="text-decoration:none;"><button class="btn-primary">🔴 Join Live Class Now</button></a>`
+                        }
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStudentTests() {
+            const activeContainer = document.getElementById('stTestActiveContainer');
+            const historyContainer = document.getElementById('stTestHistoryContainer');
+
+            const activeQues = questionsDB.filter(q => q.cls === loggedInUser.cls && q.active);
+
+            if (activeQues.length === 0) {
+                activeContainer.innerHTML = `<p style="font-size:13px; color:#64748b;">No active tests available right now.</p>`;
+            } else {
+                activeContainer.innerHTML = activeQues.map(q => {
+                    const alreadyAttempted = testResultsDB.some(r => r.studentMobile === loggedInUser.mobile && r.questionId === q.id);
+                    if (alreadyAttempted) return '';
+
+                    return `
+                        <div class="info-card" id="qbox-${q.id}">
+                            <strong>${q.chap}: ${q.ques}</strong>
+                            <div style="margin:10px 0;">
+                                ${q.optA ? `<label style="font-weight:normal;"><input type="radio" name="opt-${q.id}" value="A"> A) ${q.optA}</label><br>` : ''}
+                                ${q.optB ? `<label style="font-weight:normal;"><input type="radio" name="opt-${q.id}" value="B"> B) ${q.optB}</label><br>` : ''}
+                                ${q.optC ? `<label style="font-weight:normal;"><input type="radio" name="opt-${q.id}" value="C"> C) ${q.optC}</label><br>` : ''}
+                                ${q.optD ? `<label style="font-weight:normal;"><input type="radio" name="opt-${q.id}" value="D"> D) ${q.optD}</label>` : ''}
+                            </div>
+                            <button class="btn-success" style="padding:8px 16px; width:auto;" onclick="submitTestAnswer(${q.id})">Submit Answer</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const myHistory = testResultsDB.filter(r => r.studentMobile === loggedInUser.mobile);
+            if (myHistory.length === 0) {
+                historyContainer.innerHTML = `<p style="font-size:13px; color:#64748b;">No test history found.</p>`;
+            } else {
+                historyContainer.innerHTML = myHistory.map(h => `
+                    <div class="info-card" style="border-left-color:${h.isCorrect ? '#16a34a' : '#dc2626'}">
+                        <strong>Q: ${h.questionText}</strong>
+                        Given Answer: Option ${h.givenAnswer} | Status: <strong style="color:${h.isCorrect ? '#16a34a' : '#dc2626'}">${h.isCorrect ? 'Correct (+1)' : 'Incorrect (0)'}</strong>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function submitTestAnswer(qId) {
+            const selected = document.querySelector(`input[name="opt-${qId}"]:checked`);
+            if (!selected) { alert("Please select an option!"); return; }
+
+            const qObj = questionsDB.find(q => q.id === qId);
+            const isCorrect = selected.value === qObj.ans;
+
+            testResultsDB.push({
+                studentMobile: loggedInUser.mobile,
+                questionId: qId,
+                questionText: qObj.ques,
+                givenAnswer: selected.value,
+                isCorrect: isCorrect
+            });
+
+            saveData();
+            alert(isCorrect ? "Correct Answer! 🎉" : "Incorrect Answer!");
+            renderStudentTests();
+        }
+
+        function renderStudentMarks() {
+            const tbody = document.getElementById('stReportCardBody');
+            const myMarks = marksDB[loggedInUser.mobile];
+
+            if (!myMarks || Object.keys(myMarks).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">No report card marks updated yet.</td></tr>`;
+                document.getElementById('stOverallScore').innerText = "N/A";
+                document.getElementById('stOverallBadge').innerText = "PENDING EVALUATION";
+                return;
+            }
+
+            let total = 0;
+            let count = 0;
+            let rowsHtml = '';
+
+            for (let sub in myMarks) {
+                const m = myMarks[sub];
+                total += m;
+                count++;
+                const status = m >= 33 ? 'PASSED' : 'FAILED';
+                rowsHtml += `
+                    <tr>
+                        <td><strong>${sub}</strong></td>
+                        <td>${m} / 100</td>
+                        <td><span class="${m >= 33 ? 'badge-status' : 'badge-disabled'}">${status}</span></td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = rowsHtml;
+            const avg = Math.round(total / count);
+            document.getElementById('stOverallScore').innerText = `${avg}%`;
+            document.getElementById('stOverallBadge').innerText = avg >= 60 ? "EXCELLENT PERFORMANCE" : (avg >= 33 ? "SATISFACTORY" : "NEEDS IMPROVEMENT");
+        }
+    </script>
+</body>
+</html>
